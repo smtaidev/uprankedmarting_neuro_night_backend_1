@@ -189,26 +189,3 @@ Edit `core/config.py` to modify:
 - Advanced analytics and reporting
 
 
-
-
-
-Develop a web application with a frontend for uploading a 30-40 minute call center conversation text file and a dynamic card interface for users(unique_user id for each text file but leads are same) to add, edit, or remove questions. An LLM (e.g., GPT-3.5-Turbo) will detect key leads/variable names from these questions, which will then be used in a Retrieval-Augmented Generation (RAG) pipeline with GPT-3.5-Turbo to extract corresponding values from the text file, even if exact terms are absent, ensuring efficient and accurate extraction of 8-10 or more variables from long, nuanced transcripts. must make use of pydantic validation.
-
-├── core/
-│   ├── config.py               # Configuration settings 
-│   └── tasks.py                
-├── services/
-│   ├── rag_service.py
-│   ├── ai_llm.py               # AI service chat
-│   └── lead_generation.py
-├── api/
-│   ├── endpoints.py            # FastAPI route handlers
-│   └── models.py               # Pydantic models
-├── frontend/                   # simple frontend with small javascript and tailwind css
-│   ├── templates
-│   ├── css
-│   └── scripts                  
-├── main.py                     # Application entry point with CORS and setup
-└── README.md           
-
-    keep the code small and simple
