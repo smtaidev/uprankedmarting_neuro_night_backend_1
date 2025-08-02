@@ -38,6 +38,8 @@ A web application for analyzing call center conversations using Retrieval-Augmen
 
 
 ## Database Structure
+
+```
 Collections:
 ├── domains              # Domain management
 │   ├── domain_id (ObjectId)
@@ -70,7 +72,7 @@ Collections:
     ├── confidence_score (float)
     ├── leads_detected (array)
     └── created_at (datetime)
-
+```
 
 ## Setup & Installation
 
