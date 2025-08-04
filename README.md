@@ -12,6 +12,12 @@ A web application for analyzing call center conversations using Retrieval-Augmen
 - **RAG Pipeline**: Extract corresponding values from transcripts using Retrieval-Augmented Generation
 - **Pydantic Validation**: Robust data validation and error handling
 - **Real-time Processing**: Efficient extraction of 8-10+ variables from long transcripts
+- **Vector Database**:Vector database integration ChromaDB
+- **Database Store**:Persistent storage to MongoDB
+- **Embedding Model**:Advanced embedding models all-MiniLM-L6-v2
+
+
+
 
 ## Architecture
 
@@ -51,7 +57,6 @@ Collections:
 │   ├── question_id (ObjectId)
 │   ├── domain_id (ObjectId, ref to domains)
 │   ├── question_text (str)
-│   ├── category (str)
 │   ├── created_at (datetime)
 │   └── updated_at (datetime)
 │
@@ -181,11 +186,6 @@ Edit `core/config.py` to modify:
 
 ## Future Enhancements
 
-- Vector database integration (Pinecone, Weaviate)
-- Advanced embedding models
 - Multi-user authentication
-- Persistent storage (PostgreSQL, MongoDB)
 - Real-time websocket updates
 - Advanced analytics and reporting
-
-

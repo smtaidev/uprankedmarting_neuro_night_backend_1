@@ -1,160 +1,91 @@
-# api/endpoints.py
-from fastapi import APIRouter, File, UploadFile, HTTPException, Form
+# api/endpoints.py 
+from fastapi import APIRouter, File, UploadFile, HTTPException, Form, Depends
 from fastapi.responses import JSONResponse
-from typing import List, Dict, Any
-import uuid
-import aiofiles
-import os
-from pathlib import Path
+from typing import  Dict, Any
 
-from api.models import Question, QuestionUpdate, UserSession, ProcessingRequest, LeadExtractionResult
-from core.tasks import process_lead_extraction
-from core.config import settings
+from api.models import DomainCreate, QuestionCreate, QuestionUpdate
+from core.database import get_database
+from services.domain_service import DomainService
+from services.question_service import QuestionService
+from services.conversation_service import ConversationService
 
 router = APIRouter()
 
-# In-memory storage (in production, use a database)
-user_sessions: Dict[str, UserSession] = {}
+# Domain endpoints
+@router.post("/domains", response_model=Dict[str, Any])
+async def create_domain(domain_data: DomainCreate, db=Depends(get_database)):
+    """Create a new domain with optional initial questions"""
+    domain_service = DomainService(db)
+    return await domain_service.create_domain(domain_data)
 
-@router.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    """Upload and process transcript file"""
-    if not file.filename.endswith(('.txt', '.text')):
-        raise HTTPException(status_code=400, detail="Only .txt files are allowed")
-    
-    if file.size > settings.MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail="File too large")
-    
-    # Generate unique user ID
-    user_id = str(uuid.uuid4())
-    
-    try:
-        # Read file content
-        content = await file.read()
-        transcript = content.decode('utf-8')
-        
-        # Save to uploads directory
-        file_path = Path(settings.UPLOAD_DIR) / f"{user_id}_{file.filename}"
-        async with aiofiles.open(file_path, mode='wb') as f:
-            await f.write(content)
-        
-        # Create user session
-        session = UserSession(
-            user_id=user_id,
-            filename=file.filename,
-            transcript=transcript
-        )
-        user_sessions[user_id] = session
-        
-        return {
-            "user_id": user_id,
-            "filename": file.filename,
-            "transcript_length": len(transcript),
-            "message": "File uploaded successfully"
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+@router.get("/domains")
+async def get_domains(db=Depends(get_database)):
+    """Get all domains"""
+    domain_service = DomainService(db)
+    return await domain_service.get_all_domains()
 
-@router.get("/session/{user_id}")
-async def get_session(user_id: str):
-    """Get user session data"""
-    if user_id not in user_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = user_sessions[user_id]
-    return {
-        "user_id": session.user_id,
-        "filename": session.filename,
-        "questions": session.questions,
-        "results": session.results,
-        "transcript_preview": session.transcript[:500] + "..." if len(session.transcript) > 500 else session.transcript
-    }
+@router.delete("/domains/{domain_id}")
+async def delete_domain(domain_id: str, db=Depends(get_database)):
+    """Delete domain and all associated data"""
+    domain_service = DomainService(db)
+    return await domain_service.delete_domain(domain_id)
 
-@router.post("/questions/{user_id}")
-async def add_question(user_id: str, question: Question):
-    """Add a new question"""
-    if user_id not in user_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = user_sessions[user_id]
-    session.questions.append(question)
-    
-    return {"message": "Question added successfully", "question": question}
+@router.post("/domains/{domain_id}/generate-leads")
+async def generate_leads_for_domain(domain_id: str, db=Depends(get_database)):
+    """Generate key leads for all questions in a domain"""
+    domain_service = DomainService(db)
+    return await domain_service.generate_leads_for_domain(domain_id)
 
-@router.put("/questions/{user_id}/{question_id}")
-async def update_question(user_id: str, question_id: str, question_update: QuestionUpdate):
-    """Update an existing question"""
-    if user_id not in user_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = user_sessions[user_id]
-    
-    for i, q in enumerate(session.questions):
-        if q.id == question_id:
-            if question_update.text:
-                session.questions[i].text = question_update.text
-            if question_update.category:
-                session.questions[i].category = question_update.category
-            return {"message": "Question updated successfully", "question": session.questions[i]}
-    
-    raise HTTPException(status_code=404, detail="Question not found")
+# Question endpoints
+@router.get("/domains/{domain_id}/questions")
+async def get_domain_questions(domain_id: str, db=Depends(get_database)):
+    """Get all questions for a domain"""
+    question_service = QuestionService(db)
+    return await question_service.get_domain_questions(domain_id)
 
-@router.delete("/questions/{user_id}/{question_id}")
-async def delete_question(user_id: str, question_id: str):
+@router.post("/domains/{domain_id}/questions")
+async def add_question(domain_id: str, question_data: QuestionCreate, db=Depends(get_database)):
+    """Add a question to a domain"""
+    question_service = QuestionService(db)
+    return await question_service.add_question(domain_id, question_data)
+
+@router.put("/questions/{question_id}")
+async def update_question(question_id: str, question_data: QuestionUpdate, db=Depends(get_database)):
+    """Update a question"""
+    question_service = QuestionService(db)
+    return await question_service.update_question(question_id, question_data)
+
+@router.delete("/questions/{question_id}")
+async def delete_question(question_id: str, db=Depends(get_database)):
     """Delete a question"""
-    if user_id not in user_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = user_sessions[user_id]
-    
-    for i, q in enumerate(session.questions):
-        if q.id == question_id:
-            deleted_question = session.questions.pop(i)
-            return {"message": "Question deleted successfully", "deleted_question": deleted_question}
-    
-    raise HTTPException(status_code=404, detail="Question not found")
+    question_service = QuestionService(db)
+    return await question_service.delete_question(question_id)
 
-@router.post("/process/{user_id}")
-async def process_questions(user_id: str):
-    """Process all questions and extract leads"""
-    if user_id not in user_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = user_sessions[user_id]
-    
-    if not session.questions:
-        raise HTTPException(status_code=400, detail="No questions to process")
-    
-    try:
-        # Process lead extraction
-        results = await process_lead_extraction(
-            user_id=user_id,
-            transcript=session.transcript,
-            questions=session.questions
-        )
-        
-        session.results = results
-        
-        return {
-            "message": "Processing completed successfully",
-            "results_count": len(results),
-            "results": results
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing questions: {str(e)}")
+# Conversation endpoints
+@router.post("/domains/{domain_id}/upload")
+async def upload_conversation(domain_id: str, file: UploadFile = File(...), db=Depends(get_database)):
+    """Upload conversation file for a specific domain"""
+    conversation_service = ConversationService(db)
+    return await conversation_service.upload_conversation(domain_id, file)
 
-@router.get("/results/{user_id}")
-async def get_results(user_id: str):
-    """Get processing results"""
-    if user_id not in user_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    session = user_sessions[user_id]
-    return {
-        "user_id": user_id,
-        "results": session.results,
-        "total_questions": len(session.questions),
-        "processed_questions": len(session.results)
-    }
+@router.post("/conversations/{conversation_id}/process")
+async def process_conversation_endpoint(conversation_id: str, db=Depends(get_database)):
+    """Process conversation with domain questions"""
+    conversation_service = ConversationService(db)
+    return await conversation_service.process_conversation(conversation_id)
+
+@router.get("/conversations/{conversation_id}/results")
+async def get_conversation_results(conversation_id: str, db=Depends(get_database)):
+    """Get processing results for a conversation"""
+    conversation_service = ConversationService(db)
+    return await conversation_service.get_conversation_results(conversation_id)
+
+@router.get("/domains/{domain_id}/conversations")
+async def get_domain_conversations(domain_id: str, db=Depends(get_database)):
+    """Get all conversations for a domain"""
+    conversation_service = ConversationService(db)
+    return await conversation_service.get_domain_conversations(domain_id)
+
+
+
+

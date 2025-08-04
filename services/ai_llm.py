@@ -15,7 +15,6 @@ class AIService:
         model: str = "gpt-3.5-turbo",
         temperature: float = 0.3
     ) -> str:
-        """Get chat completion from OpenAI"""
         try:
             response = await self.client.chat.completions.create(
                 model=model,

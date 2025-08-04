@@ -1,84 +1,82 @@
-# services/rag_service.py
-import re
-from typing import List, Dict, Any
+# services/rag_services.py
+from typing import Dict, Any
 from services.ai_llm import AIService
+from services.vector_service import VectorService
+from services.lead_generation import LeadGenerationService
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RAGService:
     def __init__(self):
         self.ai_service = AIService()
-        self.chunks = []
-        self.text = ""
+        self.vector_service = VectorService()
+        self.lead_service = LeadGenerationService()
     
-    async def initialize_with_text(self, text: str):
-        """Initialize RAG service with transcript text"""
-        self.text = text
-        self.chunks = self._chunk_text(text)
+    async def store_conversation(self, conversation_id: str, content: str):
+        """Store conversation in vector database"""
+        await self.vector_service.store_conversation(conversation_id, content)
     
-    def _chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
-        """Split text into overlapping chunks"""
-        words = text.split()
-        chunks = []
-        
-        for i in range(0, len(words), chunk_size - overlap):
-            chunk = " ".join(words[i:i + chunk_size])
-            chunks.append(chunk)
-        
-        return chunks
-    
-    def _search_chunks(self, leads: List[str], top_k: int = 3) -> List[str]:
-        """Simple keyword-based chunk retrieval"""
-        scored_chunks = []
-        
-        for chunk in self.chunks:
-            score = 0
-            chunk_lower = chunk.lower()
+    async def extract_answer(self, conversation_id: str, question: str) -> Dict[str, Any]:
+        """Extract answer from conversation using RAG approach"""
+        try:
+            logger.info(f"Processing question: {question[:100]}...")
             
-            for lead in leads:
-                lead_lower = lead.lower()
-                # Count occurrences of lead terms
-                score += chunk_lower.count(lead_lower)
-                # Bonus for exact matches
-                if lead_lower in chunk_lower:
-                    score += 2
-        
-            if score > 0:
-                scored_chunks.append((chunk, score))
-        
-        # Sort by score and return top chunks
-        scored_chunks.sort(key=lambda x: x[1], reverse=True)
-        return [chunk for chunk, _ in scored_chunks[:top_k]]
-    
-    async def extract_values(self, leads: List[str], question: str) -> Dict[str, Any]:
-        """Extract values using RAG approach"""
-        # Retrieve relevant chunks
-        relevant_chunks = self._search_chunks(leads)
-        
-        if not relevant_chunks:
-            return {"answer": "No relevant information found", "confidence": 0.0}
-        
-        # Combine chunks for context
-        context = "\n\n".join(relevant_chunks)
-        
-        # Use LLM to extract answer from context
-        messages = [
-            {
-                "role": "system",
-                "content": "You are an expert at extracting specific information from call center conversations. Given a context from a conversation and a question, provide a concise and accurate answer. If the information is not clearly present, say 'Information not found'."
-            },
-            {
-                "role": "user",
-                "content": f"Context from conversation:\n{context}\n\nQuestion: {question}\n\nAnswer:"
+            # Generate leads from question
+            leads = await self.lead_service.generate_leads(question)
+            logger.info(f"Generated {len(leads)} leads: {leads}")
+            
+            # Create search query from question and leads
+            search_query = f"{question} {' '.join(leads)}"
+            
+            # Search for relevant chunks
+            relevant_chunks = await self.vector_service.search_similar(
+                conversation_id=conversation_id,
+                query=search_query,
+                top_k=5
+            )
+            
+            if not relevant_chunks:
+                return {
+                    "answer": "No relevant information found in the conversation.",
+                    "confidence": 0.0,
+                    "leads": leads,
+                    "chunks_used": 0
+                }
+            
+            # Combine chunks for context
+            context = "\n\n".join([chunk["text"] for chunk in relevant_chunks])
+            
+            # Generate answer using LLM
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are an expert at extracting specific information from call center conversations. Given a context from a conversation and a question, provide a concise and accurate answer. If the information is not clearly present, say 'Information not available in the conversation'."
+                },
+                {
+                    "role": "user",
+                    "content": f"Context from conversation:\n{context}\n\nQuestion: {question}\n\nAnswer:"
+                }
+            ]
+            
+            answer = await self.ai_service.chat_completion(messages)
+            
+            # Calculate confidence based on similarity scores and chunk count
+            avg_similarity = sum(chunk["similarity"] for chunk in relevant_chunks) / len(relevant_chunks)
+            confidence = max(0.0, min(avg_similarity * 1.2, 1.0))  # Boost similarity score slightly
+            
+            return {
+                "answer": answer.strip(),
+                "confidence": confidence,
+                "leads": leads,
+                "chunks_used": len(relevant_chunks)
             }
-        ]
-        
-        answer = await self.ai_service.chat_completion(messages)
-        
-        # Calculate simple confidence based on keyword matches
-        confidence = min(len(relevant_chunks) * 0.3, 1.0)
-        
-        return {
-            "answer": answer,
-            "confidence": confidence,
-            "context_used": len(relevant_chunks),
-            "leads_matched": leads
-        }
+            
+        except Exception as e:
+            logger.error(f"Failed to extract answer: {e}")
+            return {
+                "answer": "Error occurred during processing.",
+                "confidence": 0.0,
+                "leads": [],
+                "chunks_used": 0
+            }
