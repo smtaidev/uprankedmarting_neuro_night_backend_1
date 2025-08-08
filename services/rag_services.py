@@ -16,18 +16,13 @@ class RAGService:
     async def store_conversation(self, conversation_id: str, content: str):
         """Store conversation in vector database"""
         await self.vector_service.store_conversation(conversation_id, content)
-    
-    async def extract_answer(self, conversation_id: str, question: str) -> Dict[str, Any]:
+
+    async def extract_answer(self, conversation_id: str, question: str, question_lead) -> Dict[str, Any]:
         """Extract answer from conversation using RAG approach"""
         try:
-            logger.info(f"Processing question: {question[:100]}...")
-            
-            # Generate leads from question
-            leads = await self.lead_service.generate_leads(question)
-            logger.info(f"Generated {len(leads)} leads: {leads}")
-            
+
             # Create search query from question and leads
-            search_query = f"{question} {' '.join(leads)}"
+            search_query = f"{question} {' '.join(question_lead)}"
             
             # Search for relevant chunks
             relevant_chunks = await self.vector_service.search_similar(
@@ -40,7 +35,7 @@ class RAGService:
                 return {
                     "answer": "No relevant information found in the conversation.",
                     "confidence": 0.0,
-                    "leads": leads,
+                    "leads": question_lead,
                     "chunks_used": 0
                 }
             
@@ -68,7 +63,7 @@ class RAGService:
             return {
                 "answer": answer.strip(),
                 "confidence": confidence,
-                "leads": leads,
+                "leads": question_lead,
                 "chunks_used": len(relevant_chunks)
             }
             
@@ -80,3 +75,5 @@ class RAGService:
                 "leads": [],
                 "chunks_used": 0
             }
+
+

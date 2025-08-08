@@ -6,19 +6,22 @@ class LeadGenerationService:
     def __init__(self):
         self.ai_service = AIService()
     
-    async def generate_leads(self, question: str) -> List[str]:
+    async def generate_leads(self,organization_name, question: str) -> List[str]:
         """Generate lead terms/variables from a question"""
         messages = [
             {
                 "role": "system", 
-                "content": "You are an expert at identifying key variables and terms that would help extract information from call center transcripts. Given a question, identify 3-5 key terms, phrases, or variable names that would be most relevant for finding the answer in a conversation transcript. Return only the terms, separated by commas."
+                "content": f"""You are an expert at identifying most relevant unique key variables and terms that would help extract information from call center transcripts for a specific organization.
+                Given a question, identify the unique key terms, phrases, or variable names but one term/phrase/variable name
+                should not conflict with each others informations. Return only the terms or variable name. If there is a phrase provide an underscore between words. If the question is irrelevent response with "Provide a relevant Question" nothing else. """
             },
             {
                 "role": "user", 
-                "content": f"Question: {question}\n\nWhat are the key terms/variables to look for?"
+                "content": f"Organization Name: {organization_name}\n\nQuestion: {question}\n\nidentify the key terms/variables from the question"
             }
         ]
-        
         response = await self.ai_service.chat_completion(messages)
         leads = [lead.strip() for lead in response.split(",") if lead.strip()]
-        return leads[:5]  # Limit to 5 leads
+        return leads[:3]
+
+

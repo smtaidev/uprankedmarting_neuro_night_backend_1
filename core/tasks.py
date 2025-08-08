@@ -32,11 +32,13 @@ async def process_conversation(conversation_id: str, domain_id: str) -> List[Pro
         
         results = []
         for question_doc in questions:
+            # print(f"Question Doc: \n{question_doc}")
             try:
                 # Extract answer using RAG
                 extraction_result = await rag_service.extract_answer(
                     conversation_id=conversation_id,
-                    question=question_doc["question_text"]
+                    question=question_doc["question_text"],
+                    question_lead=question_doc["question_lead"]
                 )
                 
                 # Ensure confidence is valid

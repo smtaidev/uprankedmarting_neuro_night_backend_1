@@ -40,6 +40,7 @@ class Question(BaseModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
     domain_id: PyObjectId = Field(...)
     question_text: str = Field(..., min_length=3, max_length=500)
+    question_lead: Optional[List[str]] = Field(default=[])
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

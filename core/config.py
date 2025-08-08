@@ -12,6 +12,7 @@ logger.debug(f"Environment variables loaded. OPENAI_API_KEY: {'set' if os.getenv
 
 class Settings:
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+    OPENAI_MODEL: str = "gpt-4o"
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     DATABASE_NAME: str = os.getenv("DATABASE_NAME", "callcenter_rag")
     CHROMADB_PATH: str = os.getenv("CHROMADB_PATH", "./vector_db")

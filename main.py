@@ -26,11 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create directories if they don't exist
-Path("frontend/templates").mkdir(parents=True, exist_ok=True)
-Path("frontend/css").mkdir(parents=True, exist_ok=True)
-Path("frontend/scripts").mkdir(parents=True, exist_ok=True)
-
 # Static files and templates
 app.mount("/css", StaticFiles(directory="frontend/css"), name="css")
 app.mount("/scripts", StaticFiles(directory="frontend/scripts"), name="scripts")

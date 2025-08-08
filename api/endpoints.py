@@ -30,11 +30,7 @@ async def delete_domain(domain_id: str, db=Depends(get_database)):
     domain_service = DomainService(db)
     return await domain_service.delete_domain(domain_id)
 
-@router.post("/domains/{domain_id}/generate-leads")
-async def generate_leads_for_domain(domain_id: str, db=Depends(get_database)):
-    """Generate key leads for all questions in a domain"""
-    domain_service = DomainService(db)
-    return await domain_service.generate_leads_for_domain(domain_id)
+
 
 # Question endpoints
 @router.get("/domains/{domain_id}/questions")
@@ -44,7 +40,7 @@ async def get_domain_questions(domain_id: str, db=Depends(get_database)):
     return await question_service.get_domain_questions(domain_id)
 
 @router.post("/domains/{domain_id}/questions")
-async def add_question(domain_id: str, question_data: QuestionCreate, db=Depends(get_database)):
+async def add_domain_question(domain_id: str, question_data: QuestionCreate, db=Depends(get_database)):
     """Add a question to a domain"""
     question_service = QuestionService(db)
     return await question_service.add_question(domain_id, question_data)
@@ -60,6 +56,8 @@ async def delete_question(question_id: str, db=Depends(get_database)):
     """Delete a question"""
     question_service = QuestionService(db)
     return await question_service.delete_question(question_id)
+
+
 
 # Conversation endpoints
 @router.post("/domains/{domain_id}/upload")

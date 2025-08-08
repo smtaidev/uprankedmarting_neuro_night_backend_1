@@ -4,8 +4,9 @@ from bson import ObjectId
 from datetime import datetime
 from fastapi import HTTPException
 
-from api.models import Domain, DomainCreate, Question
+from api.models import Domain, DomainCreate, Question, QuestionCreate
 from core.database import get_database
+from services.question_service import QuestionService
 
 class DomainService:
     def __init__(self, db):
@@ -29,6 +30,7 @@ class DomainService:
                         question_text=question_text.strip()
                     )
                     question_dict = question.dict(by_alias=True)
+                    
                     q_result = await self.db.questions.insert_one(question_dict)
                     questions_added.append({
                         "id": str(q_result.inserted_id),
@@ -100,32 +102,5 @@ class DomainService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error deleting domain: {str(e)}")
     
-    async def generate_leads_for_domain(self, domain_id: str) -> Dict[str, Any]:
-        """Generate key leads for all questions in a domain"""
-        try:
-            if not ObjectId.is_valid(domain_id):
-                raise HTTPException(status_code=400, detail="Invalid domain ID")
-            
-            # Get all questions for the domain
-            questions = await self.db.questions.find({"domain_id": ObjectId(domain_id)}).to_list(length=None)
-            if not questions:
-                raise HTTPException(status_code=404, detail="No questions found for this domain")
-            
-            from services.ai_llm import AIService
-            ai_service = AIService()
-            
-            # Combine all question texts
-            all_questions_text = " ".join([q["question_text"] for q in questions])
-            
-            # Generate keywords
-            keywords = await ai_service.extract_keywords(all_questions_text)
-            
-            return {
-                "domain_id": domain_id,
-                "leads": keywords,
-                "message": f"Generated {len(keywords)} key leads"
-            }
-            
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error generating leads: {str(e)}")
+
 
