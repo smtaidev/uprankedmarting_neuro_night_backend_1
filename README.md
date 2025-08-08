@@ -4,6 +4,9 @@
 
 A web application for analyzing call center conversations using Retrieval-Augmented Generation (RAG) with GPT-3.5-Turbo. Upload transcripts, create dynamic questions, and extract key information using AI-powered lead detection and information retrieval.
 
+
+![questions ui](question_ui.png)
+
 ## Features
 
 - **File Upload**: Upload 30-40 minute call center transcript text files
