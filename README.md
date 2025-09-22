@@ -1,10 +1,13 @@
 # clone the repo
+```
+git@github.com:smtaidev/uprankedmarting_neuro_night_backend_1.git
+```
 
 # create the .env file
 ```
 OPENAI_API_KEY=
-MONGODB_URL=mongodb+srv://noyonsaha001:nmnjwIca54FXEmGO@cluster0.foguvuz.mongodb.net/uprankedmartin-calling?retryWrites=true&w=majority&appName=Cluster0
-DATABASE_NAME=CallCenterAgent
+MONGODB_URL=
+DATABASE_NAME=uprankedmartin-calling
 CHROMADB_PATH=./vector_db
 
 ```
@@ -15,8 +18,6 @@ CHROMADB_PATH=./vector_db
 ```
 docker-compose up --build
 ```
-
-
 LeadGeneration
 ├── api
 ├   ├── __init__.py
@@ -53,3 +54,5 @@ LeadGeneration
 ├   ├──  ├── header.bin
 ├   ├──  ├── length.bin
 ├   ├──  └── link_lists.bin
+
+```
