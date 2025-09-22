@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from bson import ObjectId
+import uuid
+from enum import Enum
 
 class PyObjectId(ObjectId):
     @classmethod
@@ -21,67 +23,71 @@ class PyObjectId(ObjectId):
         schema.update(type="string")
         return schema
 
-class Domain(BaseModel):
-    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
-    domain_name: str = Field(..., min_length=2, max_length=100)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+class ProcessingStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
+# Base model with common config
+class BaseMongoModel(BaseModel):
     class Config:
         populate_by_name = True
         arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
+        json_encoders = {
+            ObjectId: str,  # Automatically convert ObjectId to string
+            datetime: lambda v: v.isoformat()  # Ensure datetime serialization
+        }
 
-class DomainCreate(BaseModel):
-    domain_name: str = Field(..., min_length=2, max_length=100)
-    questions: Optional[List[str]] = Field(default=[])
+# Simplified question validation
+def validate_text_field(v, min_len=3, max_len=500):
+    if len(v.strip()) < min_len:
+        raise ValueError(f'Text must be at least {min_len} characters long')
+    return v.strip()
 
-class Question(BaseModel):
+class Question(BaseMongoModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
-    domain_id: PyObjectId = Field(...)
+    org_id: str = Field(...)
     question_text: str = Field(..., min_length=3, max_length=500)
-    question_lead: Optional[List[str]] = Field(default=[])
+    question_keywords: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default=None)
 
-    class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-
-class QuestionCreate(BaseModel):
-    question_text: str = Field(..., min_length=3, max_length=500)
+class SingleQuestionCreate(BaseModel):
+    org_id: str = Field(..., min_length=1, max_length=50)
+    question: str = Field(..., min_length=3, max_length=500)
+    org_name: str = Field(..., min_length=2, max_length=100)
+    
+    @field_validator('question')
+    def validate_question(cls, v):
+        return validate_text_field(v, 3, 500)
 
 class QuestionUpdate(BaseModel):
-    question_text: Optional[str] = Field(None, min_length=3, max_length=500)
+    question: str = Field(..., min_length=3, max_length=500)
+    
+    @field_validator('question')
+    def validate_question(cls, v):
+        return validate_text_field(v, 3, 500)
 
-class Conversation(BaseModel):
+
+class Conversation(BaseMongoModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
-    domain_id: PyObjectId = Field(...)
-    filename: str = Field(...)
-    content: str = Field(...)
-    user_session_id: str = Field(...)
+    org_id: str = Field(...)
+    conv_id: str = Field(...)
+    conv_script: str = Field(...)
     processed: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
 
-class ProcessingResult(BaseModel):
+class QAPair(BaseMongoModel):
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
-    conversation_id: PyObjectId = Field(...)
-    question_id: PyObjectId = Field(...)
-    question_text: str = Field(...)
-    extracted_answer: str = Field(...)
-    confidence_score: float = Field(..., ge=0.0, le=1.0)
-    leads_detected: List[str] = Field(default=[])
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    org_id: str = Field(...)
+    conv_id: str = Field(...)
+    question: str = Field(...)
+    answer: str = Field(...)
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-
-
+class QAResponse(BaseModel):
+    question: str
+    answer: str
+    createdAt: str

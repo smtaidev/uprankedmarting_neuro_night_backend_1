@@ -21,10 +21,10 @@ async def get_database():
 
 async def init_database():
     """Initialize MongoDB connection, create collections, and create indexes"""
-    logger.info(f"Attempting to connect to MongoDB with URI: {settings.MONGODB_URI}")
+    logger.info(f"Attempting to connect to MongoDB with URI: {settings.MONGODB_URL}")
     logger.info(f"Database Name: {settings.DATABASE_NAME}")
     try:
-        db.client = AsyncIOMotorClient(settings.MONGODB_URI)
+        db.client = AsyncIOMotorClient(settings.MONGODB_URL)
         db.database = db.client[settings.DATABASE_NAME]
         
         # Test connection
@@ -32,7 +32,8 @@ async def init_database():
         logger.info("Successfully connected to MongoDB")
         
         # Create collections explicitly
-        collections = ['domains', 'questions', 'conversations', 'results']
+        collections = ['questions','qa_pairs']
+
         existing_collections = await db.database.list_collection_names()
         for collection_name in collections:
             if collection_name not in existing_collections:
@@ -51,25 +52,14 @@ async def init_database():
 async def create_indexes():
     """Create database indexes for better performance"""
     try:
-        # Domains collection index
-        await db.database.domains.create_index([("created_at", DESCENDING)], background=True)
-        logger.debug("Created index on domains.created_at")
-        
-        # Questions collection indexes
-        await db.database.questions.create_index([("domain_id", ASCENDING)], background=True)
+        # Questions collection indexes  
+        await db.database.questions.create_index([("org_id", 1)], background=True)
+        await db.database.questions.create_index([("org_id", 1), ("question_text", "text")], background=True)
         await db.database.questions.create_index([("created_at", DESCENDING)], background=True)
-        logger.debug("Created indexes on questions.domain_id and questions.created_at")
-        
-        # Conversations collection indexes
-        await db.database.conversations.create_index([("domain_id", ASCENDING)], background=True)
-        await db.database.conversations.create_index([("user_session_id", ASCENDING)], background=True)
-        await db.database.conversations.create_index([("created_at", DESCENDING)], background=True)
-        logger.debug("Created indexes on conversations.domain_id, conversations.user_session_id, and conversations.created_at")
-        
-        # Results collection indexes
-        await db.database.results.create_index([("conversation_id", ASCENDING)], background=True)
-        await db.database.results.create_index([("question_id", ASCENDING)], background=True)
-        logger.debug("Created indexes on results.conversation_id and results.question_id")
+
+        # QA pairs collection indexes
+        await db.database.qa_pairs.create_index([("conv_id", 1)], background=True)
+        await db.database.qa_pairs.create_index([("created_at", DESCENDING)], background=True)
         
         logger.info("Database indexes created successfully")
         
