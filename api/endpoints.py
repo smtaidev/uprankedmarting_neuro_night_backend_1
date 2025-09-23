@@ -26,7 +26,7 @@ async def validate_question_with_ai(industry: str, question: str, existing_text:
     validation_result = await ai_service.question_ai_validation_check(industry, question, existing_text)
     
     if validation_result[0] == 'Provide a relevant Question':
-        return {"accepted": False, "reason": "Provide a relevant Question to your organization", "keywords": []}
+        return {"accepted": False, "reason": "Provide a relevant Question to your organization type", "keywords": []}
     elif validation_result[0] == '0':
         return {"accepted": False, "reason": "Similar question already exists", "keywords": []}
     else:

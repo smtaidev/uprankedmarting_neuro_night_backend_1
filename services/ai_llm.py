@@ -52,28 +52,30 @@ class AIService:
         """
 
         system_prompt = (
-            "You are a helpful assistant for call center question validation. Follow these steps in order:"
-            "\n\n"
-            "Step 1: Check if existing questions list is empty or contains meaningful questions\n"
-            "Step 2: If there are existing questions, check if the new question is similar to any of them\n" 
-            "Step 3: If similar, respond with: '0'\n"
-            "Step 4: If not similar OR no existing questions, check if the new question is relevant to questions a call center agent might ask a caller for the mentioned industry's call center operations. A question is relevant if it pertains to any aspect of agent-caller interactions, including but not limited to verifying caller identity, gathering information, addressing inquiries, processing requests, or managing issues related to the industry's services or workflows\n"
-            "Step 5: If completely unrelated to questions an agent might ask a caller in the industry's call center, respond with: 'Provide a relevant Question'\n"
-            "Step 6: Otherwise, extract keywords (underscore_separated if multi-word) from the new question and return the extracted keywords only, nothing else.\n"
+            "You are a helpful assistant for validating new call center questions based on an industry context. "
+            "Use broad, inclusive reasoning when determining relevance.\n\n"
+            "Step 1: Check if the existing questions list has any meaningful content.\n"
+            "Step 2: If there are existing questions, check if the new question is clearly very similar to one of them. "
+            "If yes, respond with: '0'\n"
+            "Step 3: If not similar or no existing questions, check if the new question could reasonably apply within the given industry. "
+            "This includes any business, customer service, product, or operational topic that could occur in that field.\n"
+            "Step 4: If the question is clearly unrelated to the industry or business context (like trivia or irrelevant opinions), return: 'Provide a relevant Question'\n"
+            "Step 5: Otherwise, extract key terms from the new question (use underscores for multi-word phrases) and return those only — no extra text."
         )
 
+
         user_prompt = (
-            f"industry: {industry_name}\n\n"
+            f"Industry: {industry_name}\n\n"
             f"New question: {new_question}\n\n"
             f"Existing questions: '{existing_questions}'\n\n"
-            "Follow the steps:\n"
-            "1. Are there meaningful existing questions? (ignore if empty/whitespace)\n"
-            "2. If yes, is the new question similar to any existing question?\n"
-            "3. If similar, return '0'\n" 
-            "4. If not similar or no existing questions, is this new question relevant to questions a call center agent of that industry might ask a caller in the industry's call center (e.g., verifying caller identity, gathering information, addressing inquiries, processing requests, or managing issues related to the industry's services or workflows)?\n"
-            "5. If irrelevant, return 'Provide a relevant Question'\n"
-            "6. Otherwise, extract key terms from the new question and return the extracted keywords (underscore_separated if multi-word) only, nothing else."
+            "Please validate the new question based on the following relaxed logic:\n"
+            "1. Are there any meaningful existing questions? (Ignore if empty/whitespace)\n"
+            "2. If yes, is the new question very similar to any of them? If so, return '0'\n"
+            "3. If not, does the new question make reasonable sense in the context of the given industry — for example, relating to business operations, customer interactions, products, services, or internal processes?\n"
+            "4. If it's clearly irrelevant to the industry or to any reasonable business interaction, return 'Provide a relevant Question'\n"
+            "5. Otherwise, extract keywords from the new question (use underscore_separated if needed) and return those only."
         )
+
 
         messages = [
             {"role": "system", "content": system_prompt},
