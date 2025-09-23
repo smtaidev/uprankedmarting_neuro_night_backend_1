@@ -20,10 +20,10 @@ rate_limiter = RateLimiter(requests_per_minute=100)
 circuit_breaker = CircuitBreaker(failure_threshold=5, timeout=60)
 
 # Helper function for AI validation
-async def validate_question_with_ai(org_name: str, question: str, existing_text: str):
+async def validate_question_with_ai(industry: str, question: str, existing_text: str):
     """Centralized AI validation logic"""
     ai_service = AIService()
-    validation_result = await ai_service.question_ai_validation_check(org_name, question, existing_text)
+    validation_result = await ai_service.question_ai_validation_check(industry, question, existing_text)
     
     if validation_result[0] == 'Provide a relevant Question':
         return {"accepted": False, "reason": "Provide a relevant Question to your organization", "keywords": []}
@@ -120,7 +120,7 @@ async def update_question(org_id: str, question_id: str, question_update: Questi
         existing_text = " ".join([q["question_text"] for q in other_questions])
         
         # AI validation
-        validation = await validate_question_with_ai(org["org_name"], question_update.question, existing_text)
+        validation = await validate_question_with_ai(org["industry"], question_update.question, existing_text)
         
         if not validation["accepted"]:
             return build_question_response(False, question_update.question, org_id,
