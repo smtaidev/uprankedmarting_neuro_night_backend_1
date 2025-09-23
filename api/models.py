@@ -56,7 +56,7 @@ class Question(BaseMongoModel):
 class SingleQuestionCreate(BaseModel):
     org_id: str = Field(..., min_length=1, max_length=50)
     question: str = Field(..., min_length=3, max_length=500)
-    org_name: str = Field(..., min_length=2, max_length=100)
+    # org_name: str = Field(..., min_length=2, max_length=100)
     
     @field_validator('question')
     def validate_question(cls, v):
